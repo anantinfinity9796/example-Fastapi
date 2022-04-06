@@ -1,0 +1,9 @@
+# This file is going to tell git what files and folders we don't want uploaded to git. 
+# Some of the common things that we don't want to track into git is going to be
+# 1. .env file - environment variables
+# 2. __pycache__ files
+# 3. Virtual environment -- FastAPI_venv
+
+__pycache__
+FastAPI_venv/
+.env
