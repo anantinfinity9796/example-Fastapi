@@ -547,7 +547,92 @@ variables.
      What we would do is that we would create a requirements.txt file and we would pass in the output of pip freeze which would pass
      in all the installed libraries with their specific versions into the requirements.txt file
                 pip freeze > requirements.txt  
-     
-     
-     
+    So now anyone can look into our requirements.txt file and install the dependencies for our application by :
+                pip install -r requirements.txt
+
+    Next we would set up and install git
+    After installation do:
+        1. Type (git init) in the terminal in VS Code and make sure you are in the root directory of your project.
+            This will initialize git in your project and add a git folder in your directory.
+        2. Now skip git add readme.md
+        3. Now we will run (git add --all). This will add all of our files of the directory into the repository.
+        4. Now run (git commit -m "Initial commot"), to commit and finalize the changes to the repository.
+        5. Now run (git branch -M master) to set what our branch is. This would set our branch to be called as master
+        6. Then we would have to set up a remote branch. This is whats gonna allow us to store all of our code to github.
+            (git remote add origin https://github.com/anantinfinity9796/example-Fastapi.)
+        7. Finally push the code to the github repository by (git push -u origin master)
+        8. Finally the code is sent to the repository and we can verify that by going to github.
+
      """
+
+
+""" Next we will move on to deploying our application.
+    There will be two deployment methods that we will learn in this course.
+        1. We will deploy our application to a platform called as Heroku. It would give anyone access to our API.
+        2. Create an account on the heroku platform. Its free.
+        3. Now we would nedd the Heroku CLI to be installed on our computer. Download the installer and run it.
+        4. After you have installed heroku then usually we have to close the pre existing terminals and open again to access heroku.
+        5. Now check the version of heroku installed in (heroku --version).
+        6. Then login to the heroku by typing (heroku login)
+        7. The heroku documents give us a demo app to follow along but we have our own app.
+
+        8. We have to run the command (heroku create) to create and app wthin our heroku account. heroku create --help gives us all
+            the arguments to the options we have when creating the app.
+        9. We can day (heroku create <app name>)  to create our app and what we also need to know is that app names are global i.e
+            if we create and app with a name, another user around the globe cannot create an app of the same name.
+            The links are : https://fastapi-anant.herokuapp.com/ | https://git.heroku.com/fastapi-anant.git
+        10. If we type in git remote it is gonna show all of the remotes that have been set up for our git. There two now : origin and
+            heroku. So instead of using (git push origin master) to push it out to github we can just do (git push heroku master) and
+            its gonna push out to our heroku platform and then it will then create an instance for our application and install all of
+            the dependencies and deploy the application.
+        11. In the output what it will do is that it would provide the URL of the application : https://fastapi-anant.herokuapp.com/
+            For now this would give out an error which states that something in our application is broken and this is to be expected
+            because we have to do somethings before the app starts working. 
+        12. If take a look at what we have done is that we have pushed our app to heroku, but heroku does not know how to actually 
+            start our application. It does not know what commands to use, it only knows that it is a python app. When we ran it in 
+            our development environment we ran (uvicorn app.main:app --reload) to start the application but we havent given the 
+            command to heroku yet.
+        13. So what we have to do is that we have to create a file that is gonna tell heroku what is the exact command that we wanna
+            run. So inside your root directory create a file called as 'Procfile'.
+
+        14. The Procfile is just a file with the command that tells Heroku what is the command that we need to do start the application.
+            We can give it a process type and since it is a web application it will be responding to web requests we would use
+
+            web: uvicorn app.main:app --host=0.0.0.0 --port=${port:-5000}
+
+            we are not gonna pass in uvicorn app.main:app --reload because we dont want the app to be reloaded on changes because this is production.
+            There should be no changes in the application because it is in production.
+
+             We do have to provide the host ip (--host=0.0.0.0), This is just saying that we should be able to respond to request to any IP.
+             So whatever IP heroku gives us this is going to accept it.
+             Next is the port flag (--port=${port:-5000}) which would run the app on the port provided. If nor specified it runs on default port.
+             However in heroku they are actually going to provide us a port. So we dont know what this port is ahead of time but we have to accept it regardless.
+             Its actually going to pass it as an environement variable. So anytime we want to accept an EV we do (${PORT}. default is 5000).
+
+        15. Then we are gonna have to push out these changes once again using 
+                git add --all
+                git commit -m "added Procfile"
+                git push origin master 
+        16. Then to push the changes to the Heroku app do  (git push heroku master)
+        17. Anytime the heroku app is not working they have a very easy way of accessing logs (heroku logs --tail). This would tail
+            the logs as they happen.
+        18. There is some error in our app because it needs the Environment Variables and it was not checked into git. So heroku does
+            not know how to put the environment variables and we would do that either to the command line or through the dashboard.
+        19. Heroku provides us with a free postgres instance that we can access:
+            type heroku addons:create heroku-postgresql:<PLAN NAME> we have the PLAN NAME as 'hobby-dev'. This would start a heroku 
+            postgres database instance in the cloud and it will get displayed on the dashboard and we can click on the databse and
+            go to the settings and go and see the database credential. Heroku does not let us create our own databse and passwords,
+            rather they give us their own database and passwords. And they also provide us the full postgres url if we wnat it.
+        20. Heroku calls its instances as dynos.
+        21. Config VARS in settings is the place we provide the environment variables to our heroku instance. There should be only
+            one config variables. When you add your postgres instance to the heroku app, heroku adds up only one EV and that is
+            databse_url and its going to contain the entire postgres URL. We could go into our application and code it up to put the 
+            URL in our code but instead of putting this EV in our code directly we could break down  this url into multiple EV's. 
+            Now see what the EV's are in config.py and set it in the settings-->Config VARS in the heroku dashboard.
+            After doing this our app shoud work and we will try this out again.
+            We cant use the app argument ot restart the app because it does not have a restart flag.
+            On doing heroku ps --help we see that it has the restart option. So we do (heroku ps:restart) which is going to restart 
+            our dyno heroku instance.
+            Then we will do (heroku logs -tail to tail the logs).
+        
+    """
