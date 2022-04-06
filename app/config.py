@@ -9,10 +9,10 @@ from pydantic import BaseSettings
 class Settings(BaseSettings):
     """ Best Practice to set EV's is to do ALL CAPS."""
     database_hostname: str 
-    databse_port: str 
-    databse_password : str
-    databse_name: str
-    databse_username: str
+    database_port: str 
+    database_password : str
+    database_name: str
+    database_username: str
     secret_key : str
     algorithm :str
     access_token_expire_minutes : int
