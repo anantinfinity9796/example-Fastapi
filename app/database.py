@@ -42,7 +42,7 @@ from .config import settings  # Importing the pydantic class of environement var
 # There is a unique format string for a URL that needs to be passed.
 
 # SQLALCHEMY_DATABASE_URL_TEMPLATE  = 'postgresql://<username>:<password>@<ip-address/hostname>/database_name>'
-SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}"
+SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.DATABASE_USERNAME}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOSTNAME}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
 
 # SQLALCHEMY_DATABASE_URL  = 'postgresql://postgres:An@nt9796@localhost/Fastapi'
 

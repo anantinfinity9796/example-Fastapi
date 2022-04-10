@@ -16,9 +16,9 @@ from sqlalchemy.orm import Session
         2. ALGORITHM : The cryptography algorithm used --> HS256.
         3. EXPIRATION TIME: After what time the token will expire. """
 
-SECRET_KEY = settings.secret_key
-ALGORITHM = settings.algorithm
-ACCES_TOKEN_EXPIRE_MINUTES =settings.access_token_expire_minutes
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCES_TOKEN_EXPIRE_MINUTES =settings.ACCESS_TOKEN_EXPIRE_MINUTES
  
 # the token url will be our login endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl= 'login' )

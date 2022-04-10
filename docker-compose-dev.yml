@@ -1,0 +1,49 @@
+# This is a yaml file and it is technically a markup language. In a yaml file spacing matters, kind of like python.
+
+# First thing is that we need to specify what version of python is that we want to use.
+# you can go to docker.com and see what features were added in the respective versions.
+version : "3"
+
+# Then we have a concept of services : A service at the heart is essentially is a container.
+# So if you want docker to spin you up a container you would have to define a service. If you want it to spin up 4 containers, define 4 services.
+# So we have to each service or each container a name.
+
+services:
+  api:
+    build: . 
+    depends_on: 
+      - postgres
+    ports:
+        - 8000:8000
+    volumes: # This is a bind mount which allows us to sync the folders of our dev environment and docker containers
+      - ./:/usr/src/app:ro      # folders of our current directory:folder structure in ur docker cotainer. The ro(read_only prevents the container from changing any of the files)
+    command : uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      # env_file:
+          # - ./.env
+    environment:
+        - DATABASE_HOSTNAME=postgres
+        - DATABASE_PORT=5432    
+        - DATABASE_PASSWORD=Anant9796
+        - DATABASE_NAME=Fastapi
+        - DATABASE_USERNAME=postgres
+        - SECRET_KEY=dipshit
+        - ALGORITHM=HS256
+        - ACCESS_TOKEN_EXPIRE_MINUTES=30
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=fastapi
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+
+volumes:
+  postgres-db:
+
+# To run this file do (docker-compose up -d) which would run the containers in the background
+# When we run this we would see that what we are doing is that we are rebuilding the image, beacuse we specified the build here in services.
+# And then it would start our container. The naming syntax comes from the project directory <direcotry>_<name of the service>_<instance number>.
+# So this container would be fastapi_api_1.
+
+# we can see which container are running and which have dieddocker out by running (docker ps -a)
+# To see what caused a container to die out and the log status we can do (dockers logs <container name>) such as (docker logs fastapi_api_1).
