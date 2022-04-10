@@ -972,3 +972,81 @@ FASTAPI TEST CLIENT
     When we run the above command what it is gonna do is that it is gonna override the function parameters of the dependencies i.e get_db() with the function override_get_db() which is just going to give a different session object which is just pointing towards a different database. Thats why we had set up that dependency when we first started that database.
 
     Since this is a database the SQL url will still be using development Environment variables but we can hardcode the environment variables for our testing database because that does not pose a threat to the security of our app.
+
+    Since we have a brand new database the last thing that we want to do is that we would want to create the tables in the database.So we have to build out our tables before we do any other thing.
+
+    But for the test database we would do it with the sqlalchemy to build all the tables based  of the models. We could use almebic
+    as well. So we will see how to set up alembic in our testing database to show migrations in our testing as well but for now we are gonna keep things simple and use the SQL ALchemy path. 
+
+
+    So now we have a database set up but now what is happening is that if we try to run the tests two times what is happening here is that once a user is created in the database due to the unique constraints the same test with the same credentials cannot be used again. This throws an error and cuases the things to break. 
+
+    But I want to run my tests as many times as possible and I want to start out  with a clean set of tables every time. 
+    We can make use of fixtures which is function that runs before our tests runs
+            @pytest.fixture
+            def client():
+                """ This is actually going to return our client and the name of the function is actually the TestClient object
+                        that we created will be returned by this function and this function will be referenced by the test functions
+                        that need to run multiple times without violating the unique constraints of the tables."""
+
+                return TestClient(app)
+
+    But just making this function has not solved the problem, but we now have a function that runs before each one of the tests that gives us our testing client and whats even better is we can change the function a little bit from "return TestClient(app)"
+    to "yield TestClient(app)". Because now we can put in logic to what should be run before our test runs. We then "yield TestClient(app)" which is the same as returning our TestClient but the function does not exit and then we can put in some logic do do something after our test finishes.
+                    @pytest.fixture
+                    def client():
+                        # Run some logic before our test runs to create the tables
+                        Base.metadata.create_all(bind =engine)
+
+                        # Yield the TestClient(app) which is the same as return but the function does not stop with yield
+                        yield TestClient(app)
+
+                        # run some logic after the test runs and drop off all the tables
+                        Base.metadata.drop_all(bind = engine)
+    Now after running the test and then going back to database we can see that the test passed but there are no tables in the db because we dropped the tables after we are done. And if we run the tests again we can see that the test runs successfully wothout any without us having to think of any duplicate users.
+    One thing that we can do is to drop off all the existing tables first and then create the new ones and then return the app, because if any test fails then we can pass in the -x flag to stop the test after it fails and we get to keep all of our data and tables so we can see what is the current state of the database when the test fails. Because if we just delete the table then we everythin will be lost and we wont be able to see what went wrong.
+                    @pytest.fixture
+                    def client():
+                        # run some logic and  drop off all the tables before the begining of a new test cycle
+                        Base.metadata.drop_all(bind = engine)
+
+                        # Run some logic and create the tables for the test to run successfully
+                        Base.metadata.create_all(bind =engine)
+
+                        # Yield the TestClient(app) which is the same as return but the function does not stop with yield
+                        yield TestClient(app)
+    If we dont want to use SQLAlchemy then we can do it with alembic just import command from alembic 
+                    from alembic import command
+
+                    @pytest.fixture
+                    def client():
+                        # run some logic and  drop off all the tables before the begining of a new test cycle
+                        command.downgrade("base")
+
+                        # Run some logic and create the tables for the test to run successfully
+                        command.upgrade("head")
+
+                        # Yield the TestClient(app) which is the same as return but the function does not stop with yield
+                        yield TestClient(app)
+    FIXTURES IN FIXTURES
+        One of the great things about fixtures is that we can code one fixture to be dependent upon other fixtures. So we can essentially pass one fixture into the argument of another fixture. The reason we are doing this is that we want one fixture that returns our database objects and the other fixture that returns my clients.
+
+        For the database override functionality what we are gonna do is that we are gonna move it also into the session function
+        and this session fixture will yield the database object and what I can do now is that I can pass in the session fixture into my client fixture and so by doing it like this whats gonna happen is that anytime I go into my tests and I pass in the client fixture as a dependency its gonna call the client funtion and the client function will call the session fixture before it runs and in the client fixture we can pass in all the logic that we normally would. So we would copy the override_get_db function into the client fixture and in the override_get_db intead of yielding the db we would yield the session and then we copy the line    
+                        app.dependency_overrides[get_db] = override_get_db
+
+                                                    and yield a brand new test client.
+
+        The benefit of this is that not only we get access to the client we get access to the database as well, so I can make queries and I have access to the client as well.
+
+
+
+    Now we can see that our test_users files is a little bit cluttered with all the database information so we can move the database specific code to another file database.py in the tests folder.
+
+
+THERE IS ONE SLIGHT ISSUE THAT EXISTS IN THE ROUTERS IS THAT IF WE SEND A REQUEST TO "/USERS", IT IS DIFFERENT WHEN THE REQUESTS ARE BEING SENT TO "/USERS/".  When we send the requests from POSTMAN we were sending it to "/users" and then if we look at the 
+terminal logs we can see that when we send requests to "/users" it redirects it to "/users/".
+                INFO:     127.0.0.1:52666 - "POST /users HTTP/1.1" 307 Temporary Redirect
+                INFO:     127.0.0.1:52666 - "POST /users/ HTTP/1.1" 201 Created.
+
+But the fastapi is intelligent enough to send the redirects to "/users/". However this creates an issue with our testing because it does not automatically redirect and when we check for the status code it would send a status code error. beacuse it gets that the final status_code is 307 and not 201. So we wanna make sure that we add that trailing slash otherwise we would run into some issues when testing the code.
