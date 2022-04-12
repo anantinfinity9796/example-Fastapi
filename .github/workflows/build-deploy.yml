@@ -11,7 +11,7 @@ jobs:
       - name: say hi to anant
         run: echo "Hello Anant"  # Prints Hello Anant on the console
       - name: Install and Setup Python version 3.9
-        uses: actions/setup-pytho@v2
+        uses: actions/setup-python@v2
         with:
           python-version: "3.9"
       - name: update pip
