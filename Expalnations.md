@@ -1151,3 +1151,53 @@ NOW WE WANNA TEST THE LOGIN FUNCTIONALITY
         pip install Pytest
         pytest `
 * Basically all of the things that we do on our local machine we just tell this machine to do it. And we instruct it to run this everytime we do a git push/commit.
+
+
+#### Setting up GITHUB ACTIONS TO BUILD UP OUR CI/CD PIPELINE
+1. The documentation tells us to create a folder called as .github and in that folder we want to create a folder called as workflows. In the workflows folder create a build-deploy.yml file.
+2. We have to define what should trigger our code to run. Its either a git pull/push or both. But it will happen on a push/pull on every single branch, but it may be desirable to run it on only the master branch and a couple of other branches. Fo that what we can do is we can go to the next line, hit tab and type push: go to next line, hit tab, type branches:[list of branches].
+        `on:
+            push:
+                branches: ["master","another branch"]
+            pull_request:
+                branches:
+                    - "test_branch`
+    But we are not going to do any of that because we have only one branch.
+3. Once we have defined what's going to trigger our workflow we will then have to create a job. A job is the set of steps that execute on the same runner(runner being the VM). But we have t define what type of machine(OS) it has to RUn on(linux/windows/MAC).
+Since the production Environement is running on a Linux machine it makes sense to run it on a Linux machine.\
+4. Then we have to provide a list of steps to execute. When we provide this we give the command to run and a human-readable name also.
+5. The github marketplace has got very good predefined actions of tasks such as pulling code and etc. You can search for checkout in the marketplace and this is what is responsible for pulling your code. Just say `- uses: actions/checkout@v2.` and we could specify a specific repository that we want to pull, however github already knows what repository we are working on so we dont have to pass in any other field, but there is documentation if you want to include other stuff.
+6. We now want to push the changes to our git repository. Once we push this it will be a part of our repository and it will trigger github actions to actually trigger this workflow.
+7. Technically the CI/CD flows don't have to hosted on the internet.They can be hosted on the local machine itself.
+8. Even though github actions is free they only give you a certain number of build minutes for free.
+9. Now we want to setup python and because this is such a common task it should have and action on the github marketplace. We would use the Setup-Python actions form the marketplace.  If we wanted to test our application on multiple python versions then what we can do is that we can go in setup-python--> strategy--> matrix and provide a list of versions that we need to setup to test our workflow on various python versions.It makes sure that our code works on all of them. YOU CAN DO THE SAME THING FOR DIFFERENT OPERATING SYSTEMS.
+10. Next we will update pip and install all our dependencies from the requirements.txt file.
+11. We can even see the list of workflows that github actions has detected and we can create many different yaml files inside these workflows to have different workflows. So we might have one workflow for one branch and a completely seperate workflow for another branch. 
+12. Next what we want to do is that we want to run pytest. To run this just set up the name and the run command in the build-deploy file. To run multiple commands in a single run keyword
+                    run : |
+                        pip install pytest
+                        pip install numpy     # We are not really installing numpy its just for example.
+13. But running pytest would break the functionality and because we due to security reasons we have not added environment variable files to the github repo. So it would say that database_username, password etc not found.
+14. So we need to set up the environment variables in the Vitual Machine of github actions.
+15. We can set up job specific environment variables, this EV would only be accessible within one job i.e the job1 which was the current job. We would use the " env: " tag to provide for the environment variables. But this won't work in job2.
+            env:
+                DATABASE_HOSTNAME=localhost
+                DATABASE_PORT=5432    
+16. But if we want an Environment variable that is shared across all of our jobs we can specify the  EV in the yaml file before the starting the jobs tag.
+            env:
+                DATABASE_HOSTNAME=localhost
+                DATABASE_PORT=5432
+            jobs:
+                job1:
+                    runs-on: ubuntu-latest
+
+17. But we would still face some errors in running the tests because we dont have a database installed in the Virtual Machine (runner) of github actions. We would have to set the database itself on the runner or we would have to point it to a remote database hosted on heroku or AWS. But for testing purposes it would be best if set it up on github only.
+
+18. In this case one problem there is that we are hardcoding the environment variables, which is not recommended. We have to store them secretly so that the runner has access to them but no one else can see them because storing them here could cause issues.
+    1. ##### Working with github Secrets
+        1. Go to settings of your repository in the github page. Here there is a section called as secrets in which we can define secrets so that we can access them in our workflows. The secret is globalally accepted across all branches.
+        2. The secret is nothing but a key value pair that is stored securely and would be accessible in the workflow.
+        3. Click on New Repository Secret and give the name and the value.
+        4. To reference the secret in your code in the value part in the env tag in build-deploy.yml file do :
+                        `env:`
+                            `DATABASE_HOSTNAME: ${{secrets.DATABASE_HOSTNAME}}` 
