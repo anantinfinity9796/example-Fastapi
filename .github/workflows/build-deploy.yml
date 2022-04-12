@@ -10,4 +10,12 @@ jobs:
         uses: actions/checkout@v2
       - name: say hi to anant
         run: echo "Hello Anant"  # Prints Hello Anant on the console
-        
+      - name: Install and Setup Python version 3.9
+        uses: actions/setup-pytho@v2
+        with:
+          python-version: "3.9"
+      - name: update pip
+        run: python -m pip install --upgrade pip
+      - name: install all dependencies
+        run : pip install -r requirements.txt
+
