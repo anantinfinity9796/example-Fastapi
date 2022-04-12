@@ -4,9 +4,11 @@ from http import client
 from fastapi.testclient import TestClient
 from app.main import app
 import pytest
-
+from app import models
 from alembic import command  # For doing the creation and deletion of database tables in the test database with alembic
 
+# import the create_access_token from the ouath2 library for the fixture
+from app.oauth2 import create_access_token
 
 # Setting up the test database instance
 
@@ -144,3 +146,90 @@ def client(session):
 
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
+
+
+# this fixture was created so that we could have multiple users in our database and it is not the best way to create another user.
+# Down in the post data we would have to create another post.
+@pytest.fixture()
+def test_user2(client):
+    user_data = {"email":"anant123@gmail.com",
+                    "password":"password245"}
+
+    res = client.post("/users/", json = user_data)
+
+    new_user = res.json()
+    new_user['password'] = user_data['password'] # because the response object does not have the password we are adding it.
+
+    return new_user
+
+
+
+
+
+
+@pytest.fixture()
+def test_user(client):
+    user_data = {"email":"anant@gmail.com",
+                    "password":"password246"}
+
+    res = client.post("/users/", json = user_data)
+
+    new_user = res.json()
+    new_user['password'] = user_data['password'] # because the response object does not have the password we are adding it.
+
+    return new_user
+
+
+
+@pytest.fixture
+def token(test_user):
+    return create_access_token({"user_id": test_user['id']})
+
+@pytest.fixture()
+def authorized_client(client, token):  # This new fixture would give us an authenticated client so anytime we want to use it for authenticated request
+    client.headers = {
+        **client.headers,
+        "Authorization": f"Bearer {token}"
+    }
+
+    return client
+
+
+@pytest.fixture
+def test_post(test_user, session, test_user2):
+    post_data = [{
+        "title":"first title",
+        "content":"first content",
+        "owner_id" : test_user['id']
+    },  {
+        "title":"2nd title",
+        "content":"2nd content",
+        "owner_id" : test_user['id']
+    },  {
+        "title":"3rd title",
+        "content":"3rd content",
+        "owner_id" : test_user['id']
+    },  {
+        "title":"4th title",
+        "content":"4th content",
+        "owner_id" : test_user2['id']}
+
+    ]
+    # If we want to take this dictionary and convert it into a list of post_models, we can use the map function
+    # The map function would iterate through each item in the list and take each dictionary and then convert it into a models.post
+    def create_post_model(post):
+        return models.Post(**post)
+        
+
+    post_map = map(create_post_model, post_data)
+    # The map does not return a list rather it returns a map object and we need to convert it into a list.
+    posts = list(post_map)
+
+    # in sql alchemy if we want to add multiple entries to a database we can call the add_all method
+    session.add_all(posts)
+
+    # to commit the changes we do a session.commit()
+    session.commit()
+    # Query the database and return the posts.
+    posts = session.query(models.Post).all()
+    return posts

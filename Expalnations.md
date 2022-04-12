@@ -1050,3 +1050,104 @@ terminal logs we can see that when we send requests to "/users" it redirects it 
                 INFO:     127.0.0.1:52666 - "POST /users/ HTTP/1.1" 201 Created.
 
 But the fastapi is intelligent enough to send the redirects to "/users/". However this creates an issue with our testing because it does not automatically redirect and when we check for the status code it would send a status code error. beacuse it gets that the final status_code is 307 and not 201. So we wanna make sure that we add that trailing slash otherwise we would run into some issues when testing the code.
+
+
+NOW WE WANNA TEST THE LOGIN FUNCTIONALITY
+    So we would pass the client fixture in the function parameters because we need to be able to send a request via a session.
+    And we dont want to send the login data in the request in the JSON format. Rather previously we used to send it in type form data. To change the request from the client.post so that it sends form data change it into data instead of JSON
+
+    But when we try to login the user we are greeted with the invalid credentials  i.e 403 error but we are creating a user in just the previous test so it should stay in the database right. Here we can see that the fixtures have a specific scope and right now they are running on the default scope which means that they would run before every single function that's dependent on them. So thats why the user gets deleted because we run the test test create_user which causes the user to be created and the user is in the database then as soon as we start to run the test login user we run the command to drop all the tables in the fixture and this causes it to remove all the tables form the previuos fixture run which it had created and hence the error invalid credentials.
+
+    SO TO FIX THE PROBLEM WE NEED TO FIX THE SCOPE OF THE FIXTURES: THE DEFAULT IS FUNCTION WHICH MEANS THAT THE THE FIXTURE WILL RUN AFTER EVERY FUNCTION BUT WE CAN CHANGE IT TO MODULE, THAT MEANS THAT FOR ALL THE TESTS OF A SPECIFIC MODULE WE ARE GONNA RUN THE FIXTURES JUST IN THE BEGINING. THE SCOPE CAN BE SET BY THE SCOPE PARAMETER.
+
+    BUT THIS CREATES A LOT OF ISSUES BECAUSE THE TEST LOGIN IS DEPENDENT ON THE TEST CREATE_USER AND IF WE MOVE THE LOGIN USER AT THE TOP THEN AGAIN WE WOULD HAVE A PROBLEM AND IT WOULD BREAK OUR TEST AGAIN BECAUSE CREATE USER WOULD CREATE IT AFTER THE LOGIN TEST. 
+    WE ARE NOT FOLLOWING THE BEST PRACTICES BECAUSE WE WANT EACH AND EVERY TEST TO BE INDEPENDENT OF ONE ANOTHER. 
+    So we need to make sure that depending upon our requirements we are giving the correct scope to our fixtures.
+
+    TO MAKE OUR LOGIN_USER_TEST BE INDEPENDENT OF THE TEST CREATE_USER WE WOULD DEFINE A FUNCTION THAT WILL GET CALLED THAT WILL CREATE A BRAND NEW USER BEFORE OUR LOGIN FUNCTION RUNS. WHAT WE MEAN BY A FUNCTION IS THAT WE WOULD BE DFINING A NEW FIXTURE.
+    In that fixture function we would give the credentials of a test_user in json format and make a request. Then we would want to return the information about the user so that the test_user function has the correct information about the user that tries to login.
+
+    We also wanna do a few extra checks about te login user i.e the token is valid etc. We can make use of the pydantic model that we use for the login response which is set to schemas.token in the file schema.py. So lets import token inside test_users.py
+
+    BEFORE WE CREATE ANY MORE NEW TESTS IN OUR CODE WE WOULD CREATE A NEW FILE KNOWN AS CONFTEST.PY AND WHAT IS DOES IS THAT IT ALLOWS US TO DEFINE FIXTURES IN HERE AND ANY FIXTURES WE DEFINE IN OUR FILE WILL AUTOMATICALLY BE ACCESSIBLE TO ANY OF OUR TESTS WITHIN THE TESTS PACKAGE FOLDER. EVEN SUB-PACKAGES WILL AUTOMATICALLY HAVE ACCESS TO ANY OF THESE FIXTURES.
+        1. What we will do is that we are gonna take all of database fixtures and copy them to CONFTEST.PY
+        2. Now we dont have to import the fixtures into the files. They would be automatically available.
+        3. When running the tests we can see that all of our tests passed without any imports.
+        4. Lets say that we have a sub package called as API in the tests package. So this will have acess to all the fixtures in the file conftest.py without importing them. We can create a new file called as conftest in the API subpackage but the it wont be accessible to the tests package but all the sub-packages in the API package will have access to it.
+
+    We also want to test the posts by the file test_post.py
+        1. This will pose some extra challenges beacuse all of our post path operation require authentication.
+        2. We  would like to create a fixture that does this automatically for us. But instead of making requests to our API I want to just import the method (oauth2) for creating an access token. So we could just import this into our tests and create a fake token for ourselves wihtout having to go through the full api and get a token by making calls.
+        3. We will go to conftest.py to create the fixtures.
+                @pytest.fixture
+                def token(test_user):
+                    return create_access_token({"user_id": test_user['id']})
+
+                @pytest.fixture()
+                def authorized_client(client, token):  # This new fixture would give us an authenticated client so anytime we want to use it for authenticated request
+                    client.headers = {
+                        **client.headers,
+                        "Authorization": f"Bearer {token}"
+                    }
+
+                    return client
+
+        4.  def test_get_all_posts(authorized_client):
+                res = authorized_client.get("/posts/")
+                print(res.json())
+
+                assert res.status_code == 200
+        5. Now we can see that the tests have passed successfully  but we wont be able to see any posts because we dont have any in the database. We will tackle that afterwards.
+        6. The fixture authorized client would be really useful for testing of our posts routers because we would need to be logged in for updating, deleting and creating posts. But the question is where do we put this fixture because its used in so many places we can just put it in conftest.py so that it can be used by other functions wihtout importing it.
+
+        6. We will create a fixture that wil create some test posts and add it to the database using the session object by the (session.add_all()) method. And to add it all we do (session.commit()). TO query the database we can do a (session.query()).
+
+## The CI/CD Pipiline
+#### But what is CI/CD?
+    CI - Continuous Integration ---> This is an automated process to build, package and test applications
+    CD - Continous Delivery  ---> This Picks up where continous Integration ends and automates the delivery of Applications. This is what is responsible of automatically pushing out changes to your production network.
+
+#### But why do we need a CI?CD pipeline.
+1. So our current manual process is that we make some changes to our code and then we are going to commit those changes to git and then we want to test those changes using pytest so that we can verify that our changes did not break any functionality in our code.
+2. If our tests pass then we have an optional step of building any images so things like docker images etc.
+3. Then the step comes to deploy our application which can have multiple steps depending upon how we deploy our application.
+#### So we are going to see here what our CI/CD pipeline looks like after we set it up
+1. Make changes to our code  ---> Manual
+2. Commit Changes  ----> Manual
+3. upon commiting the changes to our code, this is going to trigger changes to our CI/CD pipeline to run.
+4. Pull source code ---> Continuous Integration phase
+5. Install Depepndencies ---> Continous Integration phase
+6. Run Automated tests -----> Continuous Integration phase.
+7. Build any Images ---->  Continuous Integration phase
+8. Continuous Integration phase over
+9. Grab images/code ---> Continous Delivery phase
+10. Update Production ----> Continous Delivery phase
+
+#### Some of the common CI/CD tools include Jenkins, Travis CI, Github Actions etc.
+1. We will be using github actions because its already integrated into github and its free.
+2. We do not need to install anything on our local machine because its hosted on Github.
+
+#### What is a CI/CD tool
+1. All CI/CD platforms are dead simple.
+2. They provide a runner - Nothing more than a computer(VM) to run a bunch of commands we specify.
+3. These commands are configured usually through yaml/json or through a GUI.
+4. The different steps/commands we provide makeup all of the actions our pipeline would perform.
+5. The pipeline would be trigerred based off on some event(git push/merge).
+
+#### STEPS OF A CI/CD PIPELINE
+* Below is a snapshot of some of the steps of a CI/CD pipeline.
+`steps:
+    - uses: actions/checkout@v2
+    - name: Set up python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.9"
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    - name: install dependencies
+      run: pip install -r requirements.txt
+    - name: Test with Pytest
+      run: |
+        pip install Pytest
+        pytest `
+* Basically all of the things that we do on our local machine we just tell this machine to do it. And we instruct it to run this everytime we do a git push/commit.
