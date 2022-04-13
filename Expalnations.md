@@ -1201,3 +1201,62 @@ Since the production Environement is running on a Linux machine it makes sense t
         4. To reference the secret in your code in the value part in the env tag in build-deploy.yml file do :
                         `env:`
                             `DATABASE_HOSTNAME: ${{secrets.DATABASE_HOSTNAME}}` 
+    2. ##### Setting up environements 
+        1. We can set up a whole bunch of secrets depending upon the environments,so that there would be different secrets for production, development and testing. We get a lot of flexibility.
+        2. In settings go to environments. Click on new environment. Within confiure environment we can add a secret there like the key-value pair. Then click on add secret. This adds the secret.
+        3. Now in you build-deploy.yml file add another tag " environment " after " job " and specify what the environment for the job. Provide the name of the environmen and it will have access to all of the environment variables that we define in the secrets.
+        4. To acces them simply do :
+                        `env:`
+                            `DATABASE_HOSTNAME: ${{secrets.DATABASE_HOSTNAME}}`
+                            `DATABASE_PORT: ${{secrets.DATABASE_PORT}}`
+        5. This keeps things nice and simple.
+
+19. #### Setting up a test database on our runner so that we can actually run our tests.
+    1. The easiest way to set up a database on a runner is to create a service container. Github actions is going to allow us to spin up a docker container, that way we dont have to worry about any issues with potential installation of a postgres database.    
+    2. Under jobs we specify a service and then we give this service a specific name or label and then we just tell the runner the docker image that we want to use. In this case we use the default postgres image.
+    3. We can pass EV's into the docker container as well. We can set up some passwords. What we can also do is that we can setup some health checks to wait until postgres is started and run anything afterwards, because the tests would fail because the database is down.  
+                            services:
+                                postgres:
+                                    image: postgres
+                                    env: 
+                                        POSTGRES_PASSWORD: ${{secrets.DATABASE_PASSWORD}}
+                                        # We also want to give it a custom database name. We want to automatically create the fast_api test database.
+                                        POSTGRES_DB: ${{secrets.DATABASE_NAME}}_test
+                                    ports:
+                                        - 5432:5432  # we have to hardcode these values
+                                    options: >-
+                                        --health-cmd pg_isready
+                                        --health-interval 10s
+                                        --health-timeout 5s
+                                        --health-retries 5
+    4. In the github actions page we can see that the job of seting up the database and running the tests gets completed. Now we
+    have set up the `CI` portion of the pipeline. All if the things happen in an automated fashio just by doing git push.
+    5. There is one last thing to do, it is how to build a docker image in our runner and push that out to dockerhub so that our production network can then pull that brand new image.
+        1. First we need have a repo setup on dockerhub. We have that handeled
+        2. go to page https://docs.docker.com/ci-cd/github-actions/ . it has got an excellent tutorial on how set up docker with our github actions.
+        3. Go to dockerhub/account_settings/security and get an access token.
+        4. Then its telling us to create a secret for both our username as well as the dockerhub access token in github/secrets. You can set this up in Enviroments/secrets or global secrets.
+        5. Now we need to set this up in our yaml file. We will do it at the end of our github actions workflow.
+        6. It also provides us with steps for optimizing our workflow by building caches so that we dont have to redownload our images every time we run because that is going to extend the build and runtimes for our runner which is going to cost money.
+                            - name: Login to Docker Hub
+                                uses: docker/login-action@v1
+                                with: 
+                                    username: ${{secrets.DOCKER_HUB_USERNAME}}
+                                    password: ${{secrets.DOCKER_HUB_ACCESS_TOKEN}}
+                            # Setting up docker buildx
+                            - name: Build and push
+                                id: docker_build
+                                uses: docker/build-push-action@v2
+                                with:
+                                    context: ./
+                                    file: ./Dockerfile
+                                    builder: ${{ steps.buildx.outputs.name }}
+                                    push: true
+                                    tags: ${{ secrets.DOCKER_HUB_USERNAME }}/simplewhale:latest
+                                    cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/fastapi:buildcache
+                                    cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/fastapi:buildcache,mode=max
+                            - name: Image digest
+                                run: echo ${{ steps.docker_build.outputs.digest }}
+
+20. #### Setting up the CD portion of the pipeline
+    1. 
