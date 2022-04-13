@@ -54,6 +54,14 @@ jobs:
           username: ${{secrets.DOCKER_HUB_USERNAME}}
           password: ${{secrets.DOCKER_HUB_ACCESS_TOKEN}}
         # Setting up docker buildx
+      - name: Setting up Docker buildx
+        id: buildx
+        with: 
+          username: ${{secrets.DOCKER_HUB_USERNAME}}
+          password: ${{secrets.DOCKER_HUB_ACCESS_TOKEN}}
+
+      # Optimizing with caching
+
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
