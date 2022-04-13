@@ -1,7 +1,7 @@
 name : Build and Deploy Code
 
 on: [push, pull_request]
-# just for changes purpose
+# just for changes
 jobs:
   job1:
     environment: testing
