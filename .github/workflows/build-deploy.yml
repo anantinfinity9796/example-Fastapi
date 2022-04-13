@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   job1:
-    environments: testing
+    environment: testing
     env:
       DATABASE_HOSTNAME: ${{secrets.DATABASE_HOSTNAME}}
       DATABASE_PORT: ${{secrets.DATABASE_PORT}}
@@ -14,6 +14,21 @@ jobs:
       SECRET_KEY: ${{secrets.SECRET_KEY}}
       ALGORITHM: ${{secrets.ALGORITHM}}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${{secrets.ACCESS_TOKEN_EXPIRE_MINUTES}}
+    
+    service: 
+      postgres:
+        image: postgres
+        env: 
+          POSTGRES_PASSWORD: ${{secrets.DATABASE_PASSWORD}}
+          # We also want to give it a custom database name. We want to automatically create the fast_api test database.
+          POSTGRES_DB: ${{secrets.DATABASE_NAME}}_test
+        ports:
+          -5432: 5432  # we have to hardcode these values
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     runs-on: ubuntu-latest
     steps: 
