@@ -22,7 +22,7 @@ jobs:
           # We also want to give it a custom database name. We want to automatically create the fast_api test database.
           POSTGRES_DB: ${{secrets.DATABASE_NAME}}_test
         ports:
-          -5432: 5432  # we have to hardcode these values
+          - 5432: 5432  # we have to hardcode these values
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
