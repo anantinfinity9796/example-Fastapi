@@ -1260,6 +1260,46 @@ Since the production Environement is running on a Linux machine it makes sense t
                                     cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/fastapi:buildcache,mode=max
                             - name: Image digest
                                 run: echo ${{ steps.docker_build.outputs.digest }}
+        7. This completes up the CI portion of the CI/CD pipeline. The CD portion is just a matter of providing a whole set of commands needed to push out our new code to the production network.
 
 20. #### Setting up the CD portion of the pipeline
-    1. 
+    1. Moving foward we will comment out the steps needed for setting up the docker code beacause we wont be needing it in production.
+    2. The CD pipeline would make sure that our production environment is runnung our latest code.
+    3. we could add a service in the current job and provide the code. But what I actually want to do is that we would create a seperate job so that the thngs would be organized. And we would rename job1 ---> build. The second would be deploy.
+    4. The issue with github jobs is that by default the jobs run in parallel so we would need to change this behaviour when our workflow runs so that the build and deploy job would run one after another.
+        We pass an option called as `needs` and we  pass in a list of jobs which need to be run before the `deploy` job runs which would be `build job`.
+    5. We can see the two different jobs in github actions and we can also see that the deploy job is dependent upon the build job.
+
+    6. ##### So we had two different ways to deploy stuff.
+        1. ##### Heroku
+            1. In our code we are going to provide the steps to push the changes to heroku.
+            2. Do a git remote to connect to heroku.
+            3. do git push heroku (master|main) to update the application deployment. Its very simple with heroku but in our CI/CD pipeline its very different because we dont have heroku CLI installed on this machine. So we would have to add that.
+            4. The new deploy job would start everything up from scratch potentially on a different machine so we will have to redo all the initial steps.
+                        1. pull our github repo
+                        2. install the heroku CLI
+                        3. heroku login
+                        4. add git remote for heroku
+                We could do all these steps manually or we can find an action on the github marketplace so which does all this under the hood. Because deploying to heroku is a very common task.
+            5. We would have to provide the API_key, Heroku_email and Heroku_app_name. We would create secrets in our repository to store these credentials. 
+            6. We would create a brand new environment called as `production` in github. An store the heroku credentials there.
+            7. We would specify it in the yaml file in environment like we did before.
+            8. Then we would add the code that for the automatic deploy heroku app from the marketplace.
+                        deploy:
+                        # This would start everything up from scratch potentially on a different machine so we will have to redo all the initial steps
+                            runs-on: ubuntu-latest
+                            needs: [build]
+                            environment:
+                                name: production
+                                
+                            steps:
+                            - name: deploying to Heroku
+                                uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
+                                with:
+                                    heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+                                    heroku_app_name: ${{secrets.HEROKU_APP_NAME}} #Must be unique in Heroku
+                                    heroku_email: ${{secrets.HEROKU_EMAIL}}
+            9. Thats all we have to do for heroku side of things. We will also need to pull our code from the repo.
+            10. Now for the last part we want to check out our code real quick and make some changes that would be easy to see once deployed. So in the main.py file we will add another statement and check.
+
+        2. ##### Using a linux machine on Digital Ocean

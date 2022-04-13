@@ -77,7 +77,7 @@ app.include_router(vote.router) # include the router object and all the path ope
 
 @app.get('/')      # This is the PATH OPERATION. The " / " signifies the root url. The ".get " is the http method.
 async def root():  # The async keyword just helps to give out requests asynchronously
-    return {'message':'Now the bind mount works completely' }
+    return {'message':'Successfully deployed from CI/CD Pipeline' }
 
 
 
